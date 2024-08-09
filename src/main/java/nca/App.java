@@ -48,7 +48,7 @@ public class App {
             }
             return processed.replace("{1}", "");
         } catch (Exception e) {
-            throw new UnsupportedRegexException(String.format("The regex `%s` is invalid/unsupported.", originalRegex), e);
+            throw new UnsupportedRegexException(String.format("The regex `%s` is invalid/unsupported.", regex), e);
         }
     }
 
@@ -393,14 +393,18 @@ public class App {
         return lineArray;
     }
 
-    private static void validateRegex(String regex) {
-        if (!regex.matches(COUNTER_MATCHING_REGEX)) {
+    protected static boolean containsCounter(String regex) {
+        return regex.matches(COUNTER_MATCHING_REGEX);
+    }
+
+    private static void validateRegexForAnalysis(String regex) {
+        if (!containsCounter(regex)) {
             throw new IllegalArgumentException("Regex must contain at least one counter.");
         }
     }
 
     private static void performReachabilityAnalysis(String regexp) {
-        validateRegex(regexp);
+        validateRegexForAnalysis(regexp);
         System.out.printf("Preprocessed regex: `%s`\n", regexp);
         ProductNFA pNfa = new ProductNFA(new NFA(glushkov(regexp)));
         boolean ambiguous = pNfa.isAmbiguous();
@@ -415,7 +419,7 @@ public class App {
     }
 
     private static void performApproximateAnalysis(String regexp) {
-        validateRegex(regexp);
+        validateRegexForAnalysis(regexp);
         ProductNFA pNfa = new ProductNFA(new NFA(glushkov(regexp)));
         boolean definitelyNotAmbiguous = !pNfa.mightBeAmbiguous();
         System.out.print("Approximate analysis tells us that the regex ");
@@ -458,6 +462,41 @@ public class App {
         return options;
     }
 
+    protected static class IterableLines implements Iterable<String> {
+        private final Scanner scanner;
+
+        public IterableLines(String filename) {
+            try {
+                this.scanner = new Scanner(new File(filename));
+            } catch (FileNotFoundException e) {
+                throw new IllegalArgumentException("File not found.");
+            }
+        }
+
+        @Override
+        public Iterator<String> iterator() {
+            return new Iterator<String>() {
+                @Override
+                public boolean hasNext() {
+                    if (scanner.hasNextLine()) {
+                        return true;
+                    } else {
+                        scanner.close();
+                        return false;
+                    }
+                }
+
+                @Override
+                public String next() {
+                    if (!hasNext()) {
+                        throw new NoSuchElementException();
+                    }
+                    return scanner.nextLine();
+                }
+            };
+        }
+    }
+
     public static void main(String[] args) {
         Options options = makeCommandlineOptions();
         CommandLineParser parser = new DefaultParser();
@@ -465,11 +504,12 @@ public class App {
         try {
             CommandLine cmd = parser.parse(options, args);
             String mode = cmd.getOptionValue("mode");
-            String[] regexps;
+
+            Iterable<String> regexps;
             if (cmd.hasOption('r')) {
-                regexps = new String[] { cmd.getOptionValue("regexp") };
+                regexps = Arrays.asList(new String[] { cmd.getOptionValue("regexp") });
             } else if (cmd.hasOption('f')) {
-                regexps = readFile(cmd.getOptionValue("regexp-file"));
+                regexps = new IterableLines(cmd.getOptionValue("regexp-file"));
             } else {
                 // A ParseException should be thrown before this point.
                 throw new ParseException("No regex provided.");
