@@ -1,7 +1,5 @@
 package nca;
 
-import org.junit.Test;
-
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -12,6 +10,8 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.junit.Test;
+
 /**
  * Test cases for some of the features of this project.
  */
@@ -19,9 +19,9 @@ public class AppTest {
     final String INPUT_DIR = "src/test/input/";
     final String COUNTER_MATCHING_REGEX = "\\{(\\d+|\\d+,\\d+|\\d+,)}";
 
-
     /**
-     * Tests the approximate and exact analyses algorithms using some of the regular expressions from regexlib.txt
+     * Tests the approximate and exact analyses algorithms using some of the regular
+     * expressions from regexlib.txt
      *
      * All times each of these algorithms and writes the results to separate files.
      */
@@ -33,8 +33,10 @@ public class AppTest {
         String fileName = INPUT_DIR + "processed_regexlib.txt";
         PrintWriter approxTimesWriter = new PrintWriter(new FileWriter(approxTimeFileName));
         PrintWriter exactTimesWriter = new PrintWriter(new FileWriter(exactTimeFileName));
-        for (String regex : App.readFile(fileName)) {
-            System.out.println(regex);
+        Iterable<String> lines = new App.IterableLines(fileName);
+        for (String regex : lines) {
+            assert (!regex.isEmpty());
+            assert App.containsCounter(regex);
             int maxUpperBound = getMaxUpperBound(regex);
             NFA nfa = new NFA(App.glushkov(regex));
             ProductNFA pNfa = new ProductNFA(nfa);
@@ -53,29 +55,33 @@ public class AppTest {
     }
 
     /**
-     * Gets acceptable regular expressions from regexlib.txt and writes them to processed_regexlib.txt
+     * Gets acceptable regular expressions from regexlib.txt and writes them to
+     * processed_regexlib.txt
      */
     public void processAndFilterRegexLib() throws IOException {
         System.out.println("Processing and filtering regexlib.txt (this takes a while)");
         String fileName = INPUT_DIR + "regexlib.txt";
         PrintWriter processedRegexWriter = new PrintWriter(new FileWriter(INPUT_DIR + "processed_regexlib.txt"));
-        for (String regex : App.readFile(fileName)) {
+        for (String regex : new App.IterableLines(fileName)) {
             if (regex.length() > 70) {
                 continue;
             }
             regex = App.preprocessRegex(regex);
-            if (regex == null) {
+            if (!App.containsCounter(regex)) {
+                // We only want to test regular expressions with counters.
                 continue;
             }
             try {
-                NFA nfa = new NFA(App.glushkov(regex));
-                ProductNFA pNfa = new ProductNFA(nfa);
+                ProductNFA pNfa = new ProductNFA(new NFA(App.glushkov(regex)));
                 boolean ambiguous = pNfa.isAmbiguous();
                 boolean definitelyUnambiguous = !pNfa.mightBeAmbiguous();
                 assert !(definitelyUnambiguous && ambiguous);
                 processedRegexWriter.println(regex);
             } catch (Exception e) {
-                System.out.println("Processed regex from regexlib.txt now rejected:\n" + regex);
+                // XXX: This may reject valid regular expressions that crash the
+                // code for the glushkov construction, the Product NFA construction, or the
+                // either of the ambiguity detection algorithms.
+                System.out.println("Warning: processed regex `%s` rejected: " + regex);
             }
         }
         processedRegexWriter.close();
@@ -110,35 +116,53 @@ public class AppTest {
     }
 
     /**
-     * Tests that regular expressions with unbounded counters are translated to bounded counters.
+     * Tests that regular expressions with unbounded counters are translated to
+     * bounded counters.
      */
     @Test
     public void testTranslationOfUnboundedCounters() {
         String fileName = INPUT_DIR + "unbounded_counters.txt";
-        String[] lines = App.readFile(fileName);
-        for (String line : lines) {
+        for (String line : new App.IterableLines(fileName)) {
             assert line.contains(",}");
             String processed = App.preprocessRegex(line);
-            assert processed != null;
             assert !processed.contains(",}");
         }
     }
 
+    private String[] generateRandomStrings(int numStrings, int maxlen, String alphabet) {
+        String[] generated = new String[numStrings];
+        // First string is the empty string
+        generated[0] = "";
+        for (int i = 1; i < numStrings; i++) {
+            int len = (int) (Math.random() * maxlen + 1);
+            StringBuilder sb = new StringBuilder(len);
+            for (int j = 0; j < len; j++) {
+                int randomIndex = (int) (Math.random() * alphabet.length());
+                sb.append(alphabet.charAt(randomIndex));
+            }
+            generated[i] = sb.toString();
+        }
+        return generated;
+    }
+
     /**
-     * Tests the NFA's string matcher by comparing it's output to that of Java's Matcher class.
+     * Tests the NFA's string matcher by comparing it's output to that of Java's
+     * Matcher class.
      * (Using randomly generated input strings)
      */
     @Test
-    public void testMatcher() {
-        System.out.println("Testing matcher. (this might take a while)");
+    public void testMatcherWithRandomStrings() {
         String fileName = INPUT_DIR + "matcher_test_input.txt";
-        String[] testStrings = generateRandomStrings();
-        String[] regexs = App.readFile(fileName);
+        String[] testStrings = generateRandomStrings(1000, 1000, "abcdef");
+        Iterable<String> regexs = new App.IterableLines(fileName);
         String breaks = "bcaa";
-        testStrings[0] = breaks;
-        testMatching(regexs, testStrings);
-        regexs = App.readFile(INPUT_DIR + "matcher_test_input_2.txt");
-        testStrings = new String[4];
+        testStrings[1] = breaks;
+        testMatcher(regexs, testStrings);
+    }
+
+    @Test
+    public void testMatcherWithSimpleStrings() {
+        String[] testStrings = new String[4];
         for (int i = 0; i < 4; i++) {
             testStrings[i] = "";
             for (int j = 0; j < i + 4; j++) {
@@ -146,28 +170,16 @@ public class AppTest {
             }
             testStrings[i] += "bbbbbb";
         }
-        testMatching(regexs, testStrings);
-    }
-
-    private String[] generateRandomStrings() {
-        String[] generated = new String[1000];
-        generated[0] = "";
-        for (int i = 1; i < 1000; i++) {
-            int len = (int) (Math.random() * 1000 + 1);
-            generated[i] = "";
-            for (int j = 0; j < len; j++) {
-                int randomIndex = (int) (Math.random() * "abcdef".length());
-                generated[i] += "abcdef".charAt(randomIndex);
-            }
-        }
-        return generated;
+        Iterable<String> regexs = new App.IterableLines(INPUT_DIR + "matcher_test_input_2.txt");
+        testMatcher(regexs, testStrings);
     }
 
     /**
-     * Tests the NFA's string matcher by comparing it's output to that of Java's Matcher class.
+     * Tests the NFA's string matcher by comparing it's output to that of Java's
+     * Matcher class.
      * (Using randomly generated input strings)
      */
-    private void testMatching(String[] regexs, String[] testStrings) {
+    private void testMatcher(Iterable<String> regexs, String[] testStrings) {
         for (String regex : regexs) {
             System.out.println("regex = " + regex);
             NFA nfa = new NFA(App.glushkov(App.preprocessRegex(regex)));
@@ -187,16 +199,14 @@ public class AppTest {
     }
 
     /**
-     * Tests the analysis algorithms using the two examples from the paper referenced in the project specification.
+     * Tests the analysis algorithms using the two examples from Kong et al. 2022.
      */
     @Test
     public void testAnalysesWithExamples() {
-        String ex32 = INPUT_DIR + "example_3_2.txt";
-        String ex34 = INPUT_DIR + "example_3_4.txt";
-        String r32 = App.preprocessRegex(App.readFile(ex32)[0]);
-        String r34 = App.preprocessRegex(App.readFile(ex34)[0]);
-        ProductNFA pnfa32 = new ProductNFA(new NFA(App.glushkov(r32)));
-        ProductNFA pnfa34 = new ProductNFA(new NFA(App.glushkov(r34)));
+        String r1 = App.preprocessRegex(".*a{2}");
+        String r2 = App.preprocessRegex(".*(ab{3}|cd{3})");
+        ProductNFA pnfa32 = new ProductNFA(new NFA(App.glushkov(r1)));
+        ProductNFA pnfa34 = new ProductNFA(new NFA(App.glushkov(r2)));
         assert !pnfa32.isAmbiguous() && !pnfa32.mightBeAmbiguous();
         assert !pnfa34.isAmbiguous() && pnfa34.mightBeAmbiguous();
     }

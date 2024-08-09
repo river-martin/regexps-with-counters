@@ -374,25 +374,6 @@ public class App {
         return new NCA(setsAndTokens, regex);
     }
 
-    public static String[] readFile(String fileName) {
-        List<String> lines = new ArrayList<>();
-        try {
-            File file = new File(fileName);
-            Scanner scanner = new Scanner(file);
-            while (scanner.hasNextLine()) {
-                lines.add(scanner.nextLine());
-            }
-            scanner.close();
-        } catch (ArrayIndexOutOfBoundsException e) {
-            System.out.println("Usage: <input_file_name>");
-        } catch (FileNotFoundException fnfe) {
-            System.out.println(fnfe + "");
-        }
-        String[] lineArray = new String[lines.size()];
-        lines.toArray(lineArray);
-        return lineArray;
-    }
-
     protected static boolean containsCounter(String regex) {
         return regex.matches(COUNTER_MATCHING_REGEX);
     }

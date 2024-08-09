@@ -7,7 +7,8 @@ import java.util.List;
 /**
  * An abstraction for the transitions between NCA states.
  *
- * Contains the logic that is used to determine whether a given transition can be taken,
+ * Contains the logic that is used to determine whether a given transition can
+ * be taken,
  * when given certain counter values.
  */
 public class NcaTransition {
@@ -38,21 +39,20 @@ public class NcaTransition {
             case CONDITIONAL_BACKWARD_COUNTER:
                 countersInRange = new CounterRange[counterDependencies.size() - 1];
                 counterDependencies.subList(0, counterDependencies.size() - 1).toArray(countersInRange);
-                return String.format("%d, when counters %s are within their ranges and counter %s is less than its upper bound.",
-                        dest.id, Arrays.toString(countersInRange), counterDependencies.get(counterDependencies.size() - 1)
-                );
+                return String.format(
+                        "%d, when counters %s are within their ranges and counter %s is less than its upper bound.",
+                        dest.id, Arrays.toString(countersInRange),
+                        counterDependencies.get(counterDependencies.size() - 1));
             case CONDITIONAL_BACKWARD_STAR:
                 countersInRange = new CounterRange[counterDependencies.size()];
                 counterDependencies.toArray(countersInRange);
                 return String.format("%d, when counters %s are within their ranges. (backward * transition)",
-                        dest.id, Arrays.toString(countersInRange)
-                );
+                        dest.id, Arrays.toString(countersInRange));
             case CONDITIONAL_FORWARD:
                 countersInRange = new CounterRange[counterDependencies.size()];
                 counterDependencies.toArray(countersInRange);
                 return String.format("%d, when counters %s are within their ranges.",
-                        dest.id, Arrays.toString(countersInRange)
-                );
+                        dest.id, Arrays.toString(countersInRange));
             default:
                 return "";
         }
@@ -100,7 +100,6 @@ public class NcaTransition {
         }
         return true;
     }
-
 
     /**
      * Checks whether this transition can be taken given the current counter values
@@ -161,7 +160,7 @@ public class NcaTransition {
                 }
                 break;
             default:
-                System.out.println(type);
+                System.out.println("Error: invalid transition type " + type);
                 break;
         }
         return updatedValues;

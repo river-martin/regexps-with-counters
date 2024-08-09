@@ -1,7 +1,8 @@
 package nca;
 
 /**
- * Reads characters and constructs Tokens, which are convenient to work with in other parts of the project.
+ * Reads characters and constructs Tokens, which are convenient to work with in
+ * other parts of the project.
  */
 public class MyScanner {
     private static int pos = 0;
@@ -25,7 +26,7 @@ public class MyScanner {
     }
 
     private static boolean isPredefinedCharacterClass(char c) {
-        char[] classes = new char[]{'d', 'D', 's', 'S', 'v', 'V', 'w', 'W'};
+        char[] classes = new char[] { 'd', 'D', 's', 'S', 'v', 'V', 'w', 'W' };
         for (char cl : classes) {
             if (cl == c) {
                 return true;
@@ -33,7 +34,6 @@ public class MyScanner {
         }
         return false;
     }
-
 
     private static Token scanCharClass() {
         StringBuilder charClass = new StringBuilder("[");
@@ -44,7 +44,6 @@ public class MyScanner {
         }
         return new Token(charClass.toString(), id++, TokenType.CHAR_CLASS);
     }
-
 
     private static Token scanPredefinedCharacterClass(char c2) {
         String charClass = "\\" + c2;
@@ -70,12 +69,13 @@ public class MyScanner {
         int upperBound = -1;
         if (counterString.toString().contains(",")) {
             lowerBound = Integer.parseInt(counterString.substring(1, counterString.indexOf(",")));
-            try {
-                upperBound = Integer.parseInt(
-                        counterString.substring(counterString.indexOf(",") + 1, counterString.indexOf("}"))
-                );
-            } catch (Exception e) {
-                System.out.println(e + "");
+            String upperBoundString = counterString.substring(counterString.indexOf(",") + 1,
+                    counterString.indexOf("}"));
+            if (upperBoundString.equals("")) {
+                // The counter is unbounded (above)
+                upperBound = -1;
+            } else {
+                upperBound = Integer.parseInt(upperBoundString);
             }
         } else {
             lowerBound = Integer.parseInt(counterString.substring(1, counterString.length() - 1));
