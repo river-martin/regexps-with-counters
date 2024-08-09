@@ -5,10 +5,13 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Constructs the full product NFA from an NFA. (See the constructor of this class)
+ * Constructs the full product NFA from an NFA. (See the constructor of this
+ * class)
  *
- * Contains the code that explores the product NFA to determine if the original NFA/regex is counter-ambiguous.
- * Exact analysis and approximate analysis are implemented here. Exact analysis is implemented in the isAmbiguous method.
+ * Contains the code that explores the product NFA to determine if the original
+ * NFA/regex is counter-ambiguous.
+ * Exact analysis and approximate analysis are implemented here. Exact analysis
+ * is implemented in the isAmbiguous method.
  * Approximate analysis is implemented in the mightBeAmbiguous method.
  */
 public class ProductNFA {
@@ -29,7 +32,8 @@ public class ProductNFA {
         }
 
         public boolean isAmbiguous() {
-            return a.ncaConfig.state.equals(b.ncaConfig.state) && !a.ncaConfig.counterValues.equals(b.ncaConfig.counterValues);
+            return a.ncaConfig.state.equals(b.ncaConfig.state)
+                    && !a.ncaConfig.counterValues.equals(b.ncaConfig.counterValues);
         }
 
         @Override
@@ -62,9 +66,9 @@ public class ProductNFA {
         return indices;
     }
 
-
     /**
-     * @return true if the regular expression might be ambiguous, false if it is unambiguous.
+     * @return true if the regular expression might be ambiguous, false if it is
+     *         unambiguous.
      */
     public boolean mightBeAmbiguous() {
         Pattern pattern = Pattern.compile(COUNTER_MATCHING_REGEX);
@@ -73,20 +77,24 @@ public class ProductNFA {
         while (matcher.find()) {
             counters.add(matcher.group());
         }
+        assert counters.size() > 0;
         int numApproximateRegexsChecked = 0;
-        for (String counter : counters.toArray(new String[0])) {
+        for (String counter : counters) {
             List<Integer> indices = getIndices(regex, counter);
             for (int index : indices) {
                 String pref = regex.substring(0, index);
                 pref = pref.replaceAll(COUNTER_MATCHING_REGEX, "*");
                 String suff = regex.substring(index + counter.length());
                 suff = suff.replaceAll(COUNTER_MATCHING_REGEX, "*");
+                assert !(pref == "" && suff == "");
                 String approx = pref + counter + suff;
                 if (shouldPrintApproximateRegexs) {
                     System.out.printf("Approximate regex %d:\n", numApproximateRegexsChecked);
                     System.out.println(approx);
                 }
-                ProductNFA approxNfa = new ProductNFA(new NFA(App.glushkov(App.preprocessRegex(approx))));
+                NCA nca = App.glushkov(approx);
+                NFA nfa = new NFA(nca);
+                ProductNFA approxNfa = new ProductNFA(nfa);
                 if (approxNfa.isAmbiguous()) {
                     return true;
                 }
@@ -135,6 +143,10 @@ public class ProductNFA {
             for (String symbol : s1.a.transitions.keySet()) {
                 s1.transitions.put(symbol, new ArrayList<>());
                 for (NFA.NfaState destA : s1.a.transitions.get(symbol)) {
+                    if (!s1.b.transitions.containsKey(symbol)) {
+                        // s1.b has no transition on this symbol
+                        continue;
+                    }
                     for (NFA.NfaState destB : s1.b.transitions.get(symbol)) {
                         // if destA.id <= destB.ID?
                         State s2 = new State(destA, destB);
