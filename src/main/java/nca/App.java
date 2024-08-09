@@ -15,11 +15,10 @@ import java.util.regex.Pattern;
 public class App {
     private final static String COUNTER_MATCHING_REGEX = ".*?\\{(\\d+|\\d+,\\d+|\\d+,)}.*?";
 
-    protected static String preprocessRegex(String originalRegex) {
+    protected static String preprocessRegex(String regex) {
         // TODO: document and test
-        String regex;
         try {
-            regex = originalRegex.replace("||", "");
+            regex = regex.replace("||", "");
             regex = regex.replace("\\?", "");
             regex = regex.replace("?:", "").replace("?>", "").replace("?", "");
             regex = regex.replace("[]", "");
