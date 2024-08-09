@@ -17,44 +17,49 @@ public class App {
 
     protected static String preprocessRegex(String regex) {
         // TODO: document and test
-        try {
-            regex = regex.replace("||", "");
-            regex = regex.replace("\\?", "");
-            regex = regex.replace("?:", "").replace("?>", "").replace("?", "");
-            regex = regex.replace("[]", "");
-            Pattern pattern = Pattern.compile("\\^.*?\\$|/.*?/");
-            Matcher matcher = pattern.matcher(regex);
-            Set<String> matches = new HashSet<>();
-            while (matcher.find()) {
-                matches.add(matcher.group());
-            }
-            for (String match : matches) {
-                String replacement = match.substring(1, match.length() - 1);
-                regex = regex.replace(match, replacement);
-            }
-            String processed = translatePlus(regex);
-            int i = 1;
-            while (i < processed.length()) {
-                char c2 = processed.charAt(i);
-                char c1 = processed.charAt(i - 1);
-                if (c1 == ',' && c2 == '}') {
-                    String substring = processed.substring(0, i + 1);
-                    String processedSubstring = "(" + translateUnboundedCounters(substring) + ")";
-                    processed = processedSubstring + processed.substring(substring.length());
-                    i = processedSubstring.length() + 1;
-                } else {
-                    i++;
-                }
-            }
-            return processed.replace("{1}", "");
-        } catch (Exception e) {
-            throw new UnsupportedRegexException(String.format("The regex `%s` is invalid/unsupported.", regex), e);
+
+        regex = regex.replace("||", "|()|");
+        regex = regex.replace("\\?", "");
+        regex = regex.replace("?:", "").replace("?>", "").replace("?", "");
+        regex = regex.replace("[]", "");
+        Pattern pattern = Pattern.compile("\\^.*?\\$|/.*?/");
+        Matcher matcher = pattern.matcher(regex);
+        Set<String> matches = new HashSet<>();
+        while (matcher.find()) {
+            matches.add(matcher.group());
         }
+        for (String match : matches) {
+            String replacement = match.substring(1, match.length() - 1);
+            regex = regex.replace(match, replacement);
+        }
+        String processed = translatePlus(regex);
+        int i = 1;
+        while (i < processed.length()) {
+            char c2 = processed.charAt(i);
+            char c1 = processed.charAt(i - 1);
+            if (c1 == ',' && c2 == '}') {
+                String substring = processed.substring(0, i + 1);
+                String processedSubstring = "(" + translateUnboundedCounters(substring) + ")";
+                processed = processedSubstring + processed.substring(substring.length());
+                i = processedSubstring.length() + 1;
+            } else {
+                i++;
+            }
+        }
+        return processed.replace("{1}", "");
     }
 
+    /**
+     * Replaces the + operator with the equivalent {1,} operator.
+     * 
+     * XXX: This method does not handle escaped + operators appropriately. It does
+     * not handle plusses in character classes appropriately either.
+     * 
+     * @param regex The regular expression to replace the + operators in.
+     * @return The regular expression with the + operators replaced with {1,}.
+     */
     protected static String translatePlus(String regex) {
-        // TODO: document and test
-        return regex.replaceAll("(?<=[^\\\\])\\+", "{1,}");
+        return regex.replaceAll("\\+", "{1,}");
     }
 
     protected static String translateUnboundedCounters(String regex) {
@@ -287,7 +292,7 @@ public class App {
                     }
                     ops.push(token);
                     break;
-                
+
                 case PLUS:
                     // Translate + to {1,}
                     token = new Token("{1,}", TokenType.COUNTER);

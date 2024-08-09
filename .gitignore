@@ -1,2 +1,9 @@
 target/
 processed_regexlib.txt
+src/main/resources/.antlr/
+src/main/resources/*.interp
+src/main/resources/*.tokens
+src/main/resources/SimpleRegexpLexer.java
+src/main/resources/SimpleRegexpListener.java
+src/main/resources/SimpleRegexpParser.java
+src/main/resources/SimpleRegexpBaseListener.java

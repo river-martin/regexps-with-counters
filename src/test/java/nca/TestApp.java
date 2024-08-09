@@ -15,7 +15,7 @@ import org.junit.Test;
 /**
  * Test cases for some of the features of this project.
  */
-public class AppTest {
+public class TestApp {
     final String INPUT_DIR = "src/test/input/";
     final String COUNTER_MATCHING_REGEX = "\\{(\\d+|\\d+,\\d+|\\d+,)}";
 
