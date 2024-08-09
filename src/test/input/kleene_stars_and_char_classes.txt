@@ -1,0 +1,4 @@
+(a(ab)*)*|(ba)*
+a*a{2}
+(ab)*|ac*|da{2}
+[a-c][abc][ad][a-c]
