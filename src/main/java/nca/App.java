@@ -287,12 +287,16 @@ public class App {
                     }
                     ops.push(token);
                     break;
+                
+                case PLUS:
+                    // Translate + to {1,}
+                    token = new Token("{1,}", TokenType.COUNTER);
+                    computeSetsForCounter(stackedSets, currentSets, token, stateTokens);
+                    break;
 
                 default:
-                    System.out.println("This case shouldn't be reached. (app.java):");
-                    System.out.println(regex);
-                    System.out.println(token.type);
-                    break;
+                    throw new IllegalArgumentException(
+                            String.format("Regex `%s` contains unsupported token of type `%s`", regex, token.type));
             }
             switch (token.type) {
                 case BAR:

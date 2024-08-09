@@ -81,7 +81,7 @@ public class AppTest {
                 // XXX: This may reject valid regular expressions that crash the
                 // code for the glushkov construction, the Product NFA construction, or the
                 // either of the ambiguity detection algorithms.
-                System.out.println("Warning: processed regex `%s` rejected: " + regex);
+                System.out.printf("Warning: regex `%s` rejected\n", regex);
             }
         }
         processedRegexWriter.close();
@@ -98,10 +98,8 @@ public class AppTest {
         while (matcher.find()) {
             matches.add(matcher.group());
         }
-        System.out.println(matches.size());
         int currentMax = 0;
         for (String match : matches) {
-            System.out.println(match);
             int val;
             if (match.contains(",")) {
                 val = Integer.parseInt(match.substring(match.indexOf(",") + 1, match.length() - 1));
@@ -181,7 +179,6 @@ public class AppTest {
      */
     private void testMatcher(Iterable<String> regexs, String[] testStrings) {
         for (String regex : regexs) {
-            System.out.println("regex = " + regex);
             NFA nfa = new NFA(App.glushkov(App.preprocessRegex(regex)));
             Pattern pattern = Pattern.compile(regex);
             for (String testString : testStrings) {
