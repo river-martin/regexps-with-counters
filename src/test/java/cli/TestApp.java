@@ -1,4 +1,4 @@
-package nca;
+package cli;
 
 import java.io.FileWriter;
 import java.io.IOException;
@@ -10,12 +10,16 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.antlr.v4.runtime.RecognitionException;
+import org.antlr.v4.runtime.tree.ParseTree;
 import org.junit.Test;
 
+import automata.NCA;
 import automata.NFA;
 import automata.ProductNFA;
-import cli.App;
-import cli.IterableLines;
+import regexlang.QuantifierRewriteVisitor;
+import regexlang.SimpleRegexpBaseVisitor;
+import regexlang.SimpleRegexpParser.UnboundedCounterContext;
 
 /**
  * Test cases for some of the features of this project.
@@ -119,16 +123,40 @@ public class TestApp {
     }
 
     /**
-     * Tests that regular expressions with unbounded counters are translated to
-     * bounded counters.
+     * Test that unbounded counters are translated correctly.
      */
     @Test
     public void testTranslationOfUnboundedCounters() {
         String fileName = INPUT_DIR + "unbounded_counters.txt";
+        ParseTree tree;
         for (String line : new IterableLines(fileName)) {
-            assert line.contains(",}");
-            String processed = preprocessRegex(line);
-            assert !processed.contains(",}");
+            try {
+                 tree = QuantifierRewriteVisitor.parse(line);
+                 System.out.println("Tree: " + tree.toStringTree());
+                 System.out.println(tree.getText());
+            } catch (RecognitionException e) {
+                System.out.println(e.getMessage());
+                System.out.println("Error: " + line);
+                assert line.isEmpty();
+                continue;
+            }
+            ParseTree rewrittenTree = QuantifierRewriteVisitor.rewrite(tree);
+            assert rewrittenTree != null;
+            SimpleRegexpBaseVisitor<ParseTree> validationVisitor = new SimpleRegexpBaseVisitor<ParseTree>() {
+                @Override
+                public ParseTree visitUnboundedCounter(UnboundedCounterContext ctx) {
+                    // If we get here, the rewriter did not do its job
+                    assert false;
+                    return ctx;
+                }
+            };
+            validationVisitor.visit(rewrittenTree);
+
+            // The rewriter should not change the tree if there are no unbounded counters
+            // (and there should not be any after the first rewrite)
+            ParseTree validationTree = QuantifierRewriteVisitor.rewrite(rewrittenTree);
+            assert validationTree != null;
+            assert validationTree.equals(rewrittenTree);
         }
     }
 

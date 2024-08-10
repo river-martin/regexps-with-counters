@@ -37,7 +37,7 @@
       <version>4.13.2</version>
     </dependency>
   </dependencies>
-  
+
   <build>
     <pluginManagement><!-- lock down plugins versions to avoid using Maven defaults (can be moved to
       parent pom) -->
@@ -93,6 +93,9 @@
         <configuration>
           <source>8</source>
           <target>8</target>
+          <excludes>
+            <exclude>**/.antlr/**</exclude>
+          </excludes>
         </configuration>
       </plugin>
 

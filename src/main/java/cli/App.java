@@ -249,7 +249,7 @@ public class App {
             }
         } catch (ParseException e) {
             System.out.println(e.getMessage());
-            formatter.printHelp("java nca.App [-f|-r] <arg> -m <arg> [-q <arg>]", options);
+            formatter.printHelp("java cli.App [-f|-r] <arg> -m <arg> [-q <arg>]", options);
         } catch (UnsupportedRegexException e) {
             System.out.println(e.getMessage());
         }
