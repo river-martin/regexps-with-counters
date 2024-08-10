@@ -1,4 +1,4 @@
-package nca;
+package automata;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -14,7 +14,7 @@ public class NcaState {
     final int id;
     final boolean isStart;
     final protected boolean isFinal;
-    final HashMap<String, Set<NcaTransition>> transitions = new HashMap<>();
+    public final HashMap<String, Set<NcaTransition>> transitions = new HashMap<>();
 
     public NcaState(Token token, boolean isFinal, int id) {
         this.isFinal = isFinal;

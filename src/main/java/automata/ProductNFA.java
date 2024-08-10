@@ -1,8 +1,10 @@
-package nca;
+package automata;
 
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import cli.App;
 
 /**
  * Constructs the full product NFA from an NFA. (See the constructor of this
@@ -32,8 +34,8 @@ public class ProductNFA {
         }
 
         public boolean isAmbiguous() {
-            return a.ncaConfig.state.equals(b.ncaConfig.state)
-                    && !a.ncaConfig.counterValues.equals(b.ncaConfig.counterValues);
+            return a.ncaState.equals(b.ncaState)
+                    && !a.counterVals.equals(b.counterVals);
         }
 
         @Override
@@ -52,7 +54,9 @@ public class ProductNFA {
 
         @Override
         public String toString() {
-            return String.format("{configA=%s, configB=%s}", a.ncaConfig.toString(), b.ncaConfig.toString());
+            String shimStringA = NfaStateShim.shimString(a.ncaState, a.counterVals);
+            String shimStringB = NfaStateShim.shimString(b.ncaState, b.counterVals);
+            return String.format("{shimA=%s, shimB=%s}", shimStringA, shimStringB);
         }
     }
 
@@ -92,7 +96,7 @@ public class ProductNFA {
                     System.out.printf("Approximate regex %d:\n", numApproximateRegexsChecked);
                     System.out.println(approx);
                 }
-                NCA nca = App.glushkov(approx);
+                NCA nca = NCA.glushkov(approx);
                 NFA nfa = new NFA(nca);
                 ProductNFA approxNfa = new ProductNFA(nfa);
                 if (approxNfa.isAmbiguous()) {

@@ -1,4 +1,4 @@
-package nca;
+package automata;
 import java.util.*;
 
 /**
@@ -6,7 +6,7 @@ import java.util.*;
  *
  * I wrote this so that I could return both of these from the computeSetsAndGetTokens function in App.java
  */
-class SetsAndTokens {
+public class SetsAndTokens {
     final Sets sets;
     final List<Token> stateTokens;
     public SetsAndTokens(Sets sets, List<Token> stateTokens) {

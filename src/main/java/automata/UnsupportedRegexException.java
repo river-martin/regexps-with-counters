@@ -1,4 +1,4 @@
-package nca;
+package automata;
 
 public class UnsupportedRegexException extends IllegalArgumentException {
     public UnsupportedRegexException(String message, Throwable cause) {

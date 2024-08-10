@@ -1,4 +1,4 @@
-package nca;
+package automata;
 
 /**
  * Reads characters and constructs Tokens, which are convenient to work with in

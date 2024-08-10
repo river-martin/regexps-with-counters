@@ -1,4 +1,4 @@
-package nca;
+package automata;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -124,7 +124,7 @@ public class NcaTransition {
     /**
      * Increments or initializes counters.
      */
-    public HashMap<Integer, Integer> getUpdatedCounterValues(HashMap<Integer, Integer> counterValues) {
+    public HashMap<Integer, Integer> getUpdatedCounterVals(HashMap<Integer, Integer> counterValues) {
         HashMap<Integer, Integer> updatedValues = (HashMap<Integer, Integer>) counterValues.clone();
         CounterRange counterToIncrement;
         List<CounterRange> countersToInit = dest.token.countersInitializedHere;

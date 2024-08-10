@@ -12,6 +12,11 @@ import java.util.regex.Pattern;
 
 import org.junit.Test;
 
+import automata.NFA;
+import automata.ProductNFA;
+import cli.App;
+import cli.IterableLines;
+
 /**
  * Test cases for some of the features of this project.
  */
@@ -33,12 +38,12 @@ public class TestApp {
         String fileName = INPUT_DIR + "processed_regexlib.txt";
         PrintWriter approxTimesWriter = new PrintWriter(new FileWriter(approxTimeFileName));
         PrintWriter exactTimesWriter = new PrintWriter(new FileWriter(exactTimeFileName));
-        Iterable<String> lines = new App.IterableLines(fileName);
+        Iterable<String> lines = new IterableLines(fileName);
         for (String regex : lines) {
             assert (!regex.isEmpty());
             assert App.containsCounter(regex);
             int maxUpperBound = getMaxUpperBound(regex);
-            NFA nfa = new NFA(App.glushkov(regex));
+            NFA nfa = new NFA(NCA.glushkov(regex));
             ProductNFA pNfa = new ProductNFA(nfa);
             Instant before = Instant.now();
             boolean definitelyNotAmbiguous = !pNfa.mightBeAmbiguous();
@@ -62,7 +67,7 @@ public class TestApp {
         System.out.println("Processing and filtering regexlib.txt (this takes a while)");
         String fileName = INPUT_DIR + "regexlib.txt";
         PrintWriter processedRegexWriter = new PrintWriter(new FileWriter(INPUT_DIR + "processed_regexlib.txt"));
-        for (String regex : new App.IterableLines(fileName)) {
+        for (String regex : new IterableLines(fileName)) {
             if (regex.length() > 70) {
                 continue;
             }
@@ -72,7 +77,7 @@ public class TestApp {
                 continue;
             }
             try {
-                ProductNFA pNfa = new ProductNFA(new NFA(App.glushkov(regex)));
+                ProductNFA pNfa = new ProductNFA(new NFA(NCA.glushkov(regex)));
                 boolean ambiguous = pNfa.isAmbiguous();
                 boolean definitelyUnambiguous = !pNfa.mightBeAmbiguous();
                 assert !(definitelyUnambiguous && ambiguous);
@@ -120,9 +125,9 @@ public class TestApp {
     @Test
     public void testTranslationOfUnboundedCounters() {
         String fileName = INPUT_DIR + "unbounded_counters.txt";
-        for (String line : new App.IterableLines(fileName)) {
+        for (String line : new IterableLines(fileName)) {
             assert line.contains(",}");
-            String processed = App.preprocessRegex(line);
+            String processed = preprocessRegex(line);
             assert !processed.contains(",}");
         }
     }
@@ -152,7 +157,7 @@ public class TestApp {
     public void testMatcherWithRandomStrings() {
         String fileName = INPUT_DIR + "matcher_test_input.txt";
         String[] testStrings = generateRandomStrings(1000, 1000, "abcdef");
-        Iterable<String> regexs = new App.IterableLines(fileName);
+        Iterable<String> regexs = new IterableLines(fileName);
         String breaks = "bcaa";
         testStrings[1] = breaks;
         testMatcher(regexs, testStrings);
@@ -168,7 +173,7 @@ public class TestApp {
             }
             testStrings[i] += "bbbbbb";
         }
-        Iterable<String> regexs = new App.IterableLines(INPUT_DIR + "matcher_test_input_2.txt");
+        Iterable<String> regexs = new IterableLines(INPUT_DIR + "matcher_test_input_2.txt");
         testMatcher(regexs, testStrings);
     }
 
@@ -179,7 +184,7 @@ public class TestApp {
      */
     private void testMatcher(Iterable<String> regexs, String[] testStrings) {
         for (String regex : regexs) {
-            NFA nfa = new NFA(App.glushkov(App.preprocessRegex(regex)));
+            NFA nfa = new NFA(NCA.glushkov(App.preprocessRegex(regex)));
             Pattern pattern = Pattern.compile(regex);
             for (String testString : testStrings) {
                 Matcher matcher = pattern.matcher(testString);
@@ -202,8 +207,8 @@ public class TestApp {
     public void testAnalysesWithExamples() {
         String r1 = App.preprocessRegex(".*a{2}");
         String r2 = App.preprocessRegex(".*(ab{3}|cd{3})");
-        ProductNFA pnfa32 = new ProductNFA(new NFA(App.glushkov(r1)));
-        ProductNFA pnfa34 = new ProductNFA(new NFA(App.glushkov(r2)));
+        ProductNFA pnfa32 = new ProductNFA(new NFA(NCA.glushkov(r1)));
+        ProductNFA pnfa34 = new ProductNFA(new NFA(NCA.glushkov(r2)));
         assert !pnfa32.isAmbiguous() && !pnfa32.mightBeAmbiguous();
         assert !pnfa34.isAmbiguous() && pnfa34.mightBeAmbiguous();
     }

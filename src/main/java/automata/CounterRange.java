@@ -1,4 +1,4 @@
-package nca;
+package automata;
 
 /**
  * A abstraction for counter ranges.

@@ -1,14 +1,17 @@
-package nca;
+package automata;
 
 import java.util.*;
 
 /**
  * Implements a nondeterministic finite automaton.
  *
- * Contains the code that implements the string matcher (using a form of on the fly subset construction).
+ * Contains the code that implements the string matcher (using a form of on the
+ * fly subset construction).
  *
- * Contains the code that constructs an NFA from a NCA (in the constructor of this class). This is done by starting at
- * the start state and then visiting all the other states in the NCA; by taking all available transitions.
+ * Contains the code that constructs an NFA from an NCA (in the constructor of
+ * this class). This is done by starting at
+ * the start state and then visiting all the other states in the NCA; by taking
+ * all available transitions.
  */
 public class NFA {
     final HashMap<Integer, NfaState> nfaStates;
@@ -16,20 +19,23 @@ public class NFA {
     final int startID;
     protected final String regex;
 
-    protected static class NfaState {
-        final Configuration ncaConfig;
+    public static class NfaState {
         final HashMap<String, List<NfaState>> transitions;
         final int id;
+        protected final NcaState ncaState;
+        public final HashMap<Integer, Integer> counterVals;
 
-        public NfaState(int id, Configuration config) {
+        public NfaState(int id, NcaState ncaState, HashMap<Integer, Integer> counterVals) {
             this.id = id;
-            ncaConfig = config;
+            this.ncaState = ncaState;
+            this.counterVals = counterVals;
             transitions = new HashMap<>();
         }
 
         @Override
         public String toString() {
-            return String.format("(id=%d, config=%s)", id, ncaConfig.toString());
+
+            return String.format("(id=%d, shim=%s)", id, NfaStateShim.shimString(ncaState, counterVals));
         }
 
         @Override
@@ -88,35 +94,50 @@ public class NFA {
         regex = nca.regex;
         nfaStates = new HashMap<>();
         finalStates = new HashSet<>();
-        HashMap<Configuration, Integer> stateIds = new HashMap<>();
-        Queue<NfaState> newStates = new ArrayDeque<>();
+        HashMap<NfaStateShim, NfaState> shimsToNfaStates = new HashMap<>();
+        Queue<NfaState> newNfaStates = new ArrayDeque<>();
+
         int id = nca.size();
         startID = id;
-        Configuration config = nca.getRootConfig();
-        stateIds.put(config, id);
-        NfaState state = new NfaState(id++, config);
-        nfaStates.put(state.id, state);
-        newStates.add(state);
-        while (newStates.size() > 0) {
-            state = newStates.remove();
-            if (nca.evaluateFinalizationFunction(state.ncaConfig)) {
-                finalStates.add(state);
+        NfaStateShim startShim = new NfaStateShim(nca.startState(), new HashMap<>());
+        NcaState ncaStart = nca.startState();
+        // It is unnecessary to keep track of the counter values for the start state.
+        HashMap<Integer, Integer> counterVals = new HashMap<>();
+
+        NfaState nfaStartState = new NfaState(id++, ncaStart, counterVals);
+        shimsToNfaStates.put(startShim, nfaStartState);
+
+        nfaStates.put(nfaStartState.id, nfaStartState);
+        newNfaStates.add(nfaStartState);
+
+        NfaState nfaState;
+        while (newNfaStates.size() > 0) {
+            nfaState = newNfaStates.remove();
+            if (nca.evaluateFinalizationFunction(nfaState.ncaState, nfaState.counterVals)) {
+                finalStates.add(nfaState);
             }
-            for (String symbol : state.ncaConfig.state.transitions.keySet()) {
+            for (String symbol : nfaState.ncaState.transitions.keySet()) {
                 List<NfaState> nfaTransitions = new ArrayList<>();
-                for (Configuration nextConfig : nca.evaluateTransitionFunction(state.ncaConfig, symbol)) {
+                for (NfaStateShim nextShim : nca.evaluateTransitionFunction(nfaState.ncaState, nfaState.counterVals,
+                        symbol)) {
                     NfaState dest;
-                    if (!stateIds.containsKey(nextConfig)) {
-                        stateIds.put(nextConfig, id);
-                        dest = new NfaState(id++, nextConfig);
-                        nfaStates.put(dest.id, dest);
-                        newStates.add(dest);
+                    if (shimsToNfaStates.containsKey(nextShim)) {
+                        // The NFA state already exists.
+                        dest = shimsToNfaStates.get(nextShim);
+                        assert dest != null;
+                        assert nfaStates.containsKey(dest.id);
+                        assert nfaStates.get(dest.id) == dest;
+                        nfaTransitions.add(dest);
                     } else {
-                        dest = nfaStates.get(stateIds.get(nextConfig));
+                        // The NFA state does not exist yet.
+                        dest = new NfaState(id++, nextShim.ncaState, nextShim.counterVals);
+                        shimsToNfaStates.put(nextShim, dest);
+                        nfaStates.put(dest.id, dest);
+                        newNfaStates.add(dest);
                     }
                     nfaTransitions.add(dest);
                 }
-                state.transitions.put(symbol, nfaTransitions);
+                nfaState.transitions.put(symbol, nfaTransitions);
             }
         }
     }
@@ -144,11 +165,10 @@ public class NFA {
             stateString.append(s).append("\n");
         }
         return String.format(
-                   "States:\n---\n%s---\n" +
-                   "Start States:\n---\n%s---\n" +
-                   "Final states:\n---\n%s---\n" +
-                   "Transitions:\n---\n%s---",
-                stateString, startStates, finalStatesString, transitions
-               );
+                "States:\n---\n%s---\n" +
+                        "Start States:\n---\n%s---\n" +
+                        "Final states:\n---\n%s---\n" +
+                        "Transitions:\n---\n%s---",
+                stateString, startStates, finalStatesString, transitions);
     }
 }

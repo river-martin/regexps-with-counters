@@ -1,4 +1,4 @@
-package nca;
+package automata;
 
 /**
  * An enum for the types of token used in this project.
