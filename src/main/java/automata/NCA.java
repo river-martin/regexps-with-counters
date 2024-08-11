@@ -2,6 +2,8 @@ package automata;
 
 import java.util.*;
 
+import regexlang.QuantExprRewriteVisitor;
+
 /**
  * Implements a nondeterministic counter automata.
  */
@@ -22,8 +24,7 @@ public class NCA {
                     associatedCounterRanges.append(r).append(", ");
                 }
                 associatedCounterRanges = new StringBuilder(
-                        associatedCounterRanges.substring(0, associatedCounterRanges.length() - 2)
-                );
+                        associatedCounterRanges.substring(0, associatedCounterRanges.length() - 2));
                 associatedCounterRanges.append("\n");
             }
             transitions.append("Source = ").append(s).append(":\n");
@@ -42,21 +43,19 @@ public class NCA {
                     CounterRange[] counters = new CounterRange[s.token.countersIncrementedHere.size()];
                     s.token.countersIncrementedHere.toArray(counters);
                     finalConfigs.append(String.format(" when counters %s are within their ranges.\n",
-                            Arrays.toString(counters)
-                    ));
+                            Arrays.toString(counters)));
                 } else {
                     finalConfigs.append("\n");
                 }
             }
         }
         return String.format(
-                   "States:\n---\n%s\n---\n" +
-                   "Start States:\n---\n%s---\n" +
-                   "Final configurations:\n---\n%s---\n" +
-                   "State counter ranges:\n---\n%s---\n" +
-                   "Transitions:\n---\n%s---",
-                   Arrays.toString(states), startStates, finalConfigs, associatedCounterRanges, transitions
-               );
+                "States:\n---\n%s\n---\n" +
+                        "Start States:\n---\n%s---\n" +
+                        "Final configurations:\n---\n%s---\n" +
+                        "State counter ranges:\n---\n%s---\n" +
+                        "Transitions:\n---\n%s---",
+                Arrays.toString(states), startStates, finalConfigs, associatedCounterRanges, transitions);
     }
 
     public NCA(SetsAndTokens setsAndTokens, String regex) {
@@ -96,16 +95,16 @@ public class NCA {
             Token dest = tokenString.tokens.get(1);
             assert tokenString.transitionToken != null;
             switch (tokenString.transitionToken.type) {
-            case CONCAT:
-                addForwardTransition(src, dest);
-                break;
-            case STAR:
-            case COUNTER:
-                addBackwardTransition(src, dest, tokenString.transitionToken);
-                break;
-            default:
-                System.out.println("This code shouldn't be reached.");
-                break;
+                case CONCAT:
+                    addForwardTransition(src, dest);
+                    break;
+                case STAR:
+                case COUNTER:
+                    addBackwardTransition(src, dest, tokenString.transitionToken);
+                    break;
+                default:
+                    System.out.println("This code shouldn't be reached.");
+                    break;
             }
         }
     }
@@ -113,12 +112,12 @@ public class NCA {
     public void addForwardTransition(Token src, Token dest) {
         NcaTransition transition;
         if (src.lastQuantifierIsCounter() || src.lastQuantifierIsStar()) {
-            // Check all counters on this transition. (the quantifier token should be the last counter/star on it)
+            // Check all counters on this transition. (the quantifier token should be the
+            // last counter/star on it)
             transition = new NcaTransition(
-                src.countersIncrementedHere,
-                NcaTransitionType.CONDITIONAL_FORWARD,
-                states[dest.id]
-            );
+                    src.countersIncrementedHere,
+                    NcaTransitionType.CONDITIONAL_FORWARD,
+                    states[dest.id]);
         } else {
             assert src.countersIncrementedHere.size() == 0 && src.starsEndingHere.size() == 0;
             transition = new NcaTransition(NcaTransitionType.UNCONDITIONAL, states[dest.id]);
@@ -135,11 +134,10 @@ public class NCA {
             int end = src.countersIncrementedHere.indexOf(counterToIncrement);
             List<CounterRange> transitionCounters = src.countersIncrementedHere.subList(0, end + 1);
             NcaTransition transition = new NcaTransition(
-                transitionCounters,
-                NcaTransitionType.CONDITIONAL_BACKWARD_COUNTER,
-                states[dest.id],
-                transitionToken
-            );
+                    transitionCounters,
+                    NcaTransitionType.CONDITIONAL_BACKWARD_COUNTER,
+                    states[dest.id],
+                    transitionToken);
             states[src.id].addTransition(dest.symbol, transition);
         } else if (transitionToken.type == TokenType.STAR) {
             // Backward star transition.
@@ -152,11 +150,10 @@ public class NCA {
             }
             List<CounterRange> transitionCounters = src.countersIncrementedHere.subList(0, i);
             NcaTransition transition = new NcaTransition(
-                transitionCounters,
-                NcaTransitionType.CONDITIONAL_BACKWARD_STAR,
-                states[dest.id],
-                transitionToken
-            );
+                    transitionCounters,
+                    NcaTransitionType.CONDITIONAL_BACKWARD_STAR,
+                    states[dest.id],
+                    transitionToken);
             states[src.id].addTransition(dest.symbol, transition);
         } else {
             System.out.println("Failed to add backward transition. Invalid transition token.");
@@ -182,7 +179,8 @@ public class NCA {
         src.addTransition(dest.token.symbol, transition);
     }
 
-    public List<NfaStateShim> evaluateTransitionFunction(NcaState currentState, HashMap<Integer, Integer> currentCounterVals, String symbol) {
+    public List<NfaStateShim> evaluateTransitionFunction(NcaState currentState,
+            HashMap<Integer, Integer> currentCounterVals, String symbol) {
         List<NfaStateShim> nextNfaStates = new ArrayList<>();
         for (NcaTransition t : currentState.transitions.get(symbol)) {
             if (t.isAllowed(currentCounterVals)) {
@@ -356,6 +354,7 @@ public class NCA {
 
                 case PLUS:
                     // Translate + to {1,}
+
                     token = new Token("{1,}", TokenType.COUNTER);
                     computeSetsForCounter(stackedSets, currentSets, token, stateTokens);
                     break;
@@ -450,9 +449,9 @@ public class NCA {
     }
 
     public static NCA glushkov(String regex) {
+        regex = QuantExprRewriteVisitor.rewriteUnboundedCounters(regex).getText().replace("<EOF>", "");
         SetsAndTokens setsAndTokens = computeSetsAndGetStateTokens(regex);
         return new NCA(setsAndTokens, regex);
     }
-
 
 }

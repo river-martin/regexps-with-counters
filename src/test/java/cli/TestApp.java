@@ -11,6 +11,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import automata.NCA;
 import automata.NFA;
@@ -44,17 +46,25 @@ public class TestApp {
             assert (!regex.isEmpty());
             assert App.containsCounter(regex);
             int maxUpperBound = getMaxUpperBound(regex);
-            NFA nfa = new NFA(NCA.glushkov(regex));
-            ProductNFA pNfa = new ProductNFA(nfa);
-            Instant before = Instant.now();
-            boolean definitelyNotAmbiguous = !pNfa.mightBeAmbiguous();
-            Instant after = Instant.now();
-            approxTimesWriter.printf("%s,%s\n", maxUpperBound, Duration.between(before, after).toNanos());
-            before = Instant.now();
-            boolean ambiguous = pNfa.isAmbiguous();
-            after = Instant.now();
-            exactTimesWriter.printf("%s,%s\n", maxUpperBound, Duration.between(before, after).toNanos());
-            assert !(definitelyNotAmbiguous && ambiguous);
+            try {
+                NFA nfa = new NFA(NCA.glushkov(regex));
+                ProductNFA pNfa = new ProductNFA(nfa);
+                Instant before = Instant.now();
+                boolean definitelyNotAmbiguous = !pNfa.mightBeAmbiguous();
+                Instant after = Instant.now();
+                approxTimesWriter.printf("%s,%s\n", maxUpperBound, Duration.between(before, after).toNanos());
+                before = Instant.now();
+                boolean ambiguous = pNfa.isAmbiguous();
+                after = Instant.now();
+                exactTimesWriter.printf("%s,%s\n", maxUpperBound, Duration.between(before, after).toNanos());
+                assert !(definitelyNotAmbiguous && ambiguous);
+            } catch (Exception e) {
+                System.out.println("Error processing regex: " + regex);
+                e.printStackTrace();
+                exactTimesWriter.close();
+                approxTimesWriter.close();
+                throw e;
+            }
         }
         exactTimesWriter.close();
         approxTimesWriter.close();
@@ -76,7 +86,7 @@ public class TestApp {
             }
             try {
                 regex = App.preprocessRegex(regex);
-                 r = new Regexp(regex);
+                r = new Regexp(regex);
             } catch (UnsupportedRegexException e) {
                 System.out.println(String.format("Regex `%s` is invalid. " + e.getMessage(), regex));
                 continue;
@@ -85,11 +95,18 @@ public class TestApp {
                 continue;
             }
             if (r.containsCounter()) {
-                ProductNFA pNfa = new ProductNFA(new NFA(NCA.glushkov(regex)));
-                boolean ambiguous = pNfa.isAmbiguous();
-                boolean definitelyUnambiguous = !pNfa.mightBeAmbiguous();
-                assert !(definitelyUnambiguous && ambiguous);
-                processedRegexWriter.println(regex);
+                try {
+                    ProductNFA pNfa = new ProductNFA(new NFA(NCA.glushkov(regex)));
+                    boolean ambiguous = pNfa.isAmbiguous();
+                    boolean definitelyUnambiguous = !pNfa.mightBeAmbiguous();
+                    assert !(definitelyUnambiguous && ambiguous);
+                    processedRegexWriter.println(regex);
+                } catch (Exception e) {
+                    System.out.println("Error processing regex: " + regex);
+                    e.printStackTrace();
+                    processedRegexWriter.close();
+                    throw e;
+                }
             } else {
                 continue;
             }
@@ -195,14 +212,46 @@ public class TestApp {
     /**
      * Tests the analysis algorithms using the two examples from Kong et al. 2022.
      */
-    @Test
-    public void testAnalysesWithExamples() {
-        String r1 = App.preprocessRegex(".*a{2}");
-        String r2 = App.preprocessRegex(".*(ab{3}|cd{3})");
-        ProductNFA pnfa32 = new ProductNFA(new NFA(NCA.glushkov(r1)));
-        ProductNFA pnfa34 = new ProductNFA(new NFA(NCA.glushkov(r2)));
-        assert !pnfa32.isAmbiguous() && !pnfa32.mightBeAmbiguous();
-        assert !pnfa34.isAmbiguous() && pnfa34.mightBeAmbiguous();
+    @ParameterizedTest
+    @ValueSource(strings = { "(a?)+|a{2,3}", ".*(ab{3}|cd{3})", "^[\\w\\.=-]+@[\\w\\.-]+\\.[\\w]{2,3}$", "^[\\\\w\\\\.=-]+@[\\\\w\\\\.-]+\\\\.[\\\\w]{2,3}$", ".*a{2}" })
+    public void testAnalysesWithExamples(String regex) {
+        ProductNFA pnfa = new ProductNFA(new NFA(NCA.glushkov(regex)));
+        boolean ambiguous = pnfa.isAmbiguous();
+        boolean definitelyNotAmbiguous = !pnfa.mightBeAmbiguous();
+        // We should not get a contradiction
+        assert !(ambiguous && definitelyNotAmbiguous);
     }
+
+    @Test
+    public void testApproximateAmbiguityDetection() {
+        // We know what the correct results should be for these examples
+        String r = ".*a{2}";
+        ProductNFA pnfa = new ProductNFA(new NFA(NCA.glushkov(r)));
+        assert !pnfa.mightBeAmbiguous();
+        assert !pnfa.isAmbiguous();
+
+        r = ".*(ab{3}|cd{3})";
+        pnfa = new ProductNFA(new NFA(NCA.glushkov(r)));
+        assert pnfa.mightBeAmbiguous();
+        assert !pnfa.isAmbiguous();
+    }
+
+    @Test
+    public void testForEmptyStackException() {
+        String r = "http://(?:www\\.|)uploaded\\.to/\\?id=[a-z0-9]{6}";
+        ProductNFA pnfa = new ProductNFA(new NFA(NCA.glushkov(r)));
+        assert !pnfa.mightBeAmbiguous();
+        assert !pnfa.isAmbiguous();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = { "(?:a|)b{6}", "(){7}|(){6}", "a{1}||b{2}", "(a{2}|)", "(|a{2})", "a{1}|", " " })
+    public void simpleTestForEmptyStackException(String r) {
+        ProductNFA pnfa = new ProductNFA(new NFA(NCA.glushkov(r)));
+        assert !pnfa.mightBeAmbiguous();
+        assert !pnfa.isAmbiguous();
+    }
+
+
 
 }

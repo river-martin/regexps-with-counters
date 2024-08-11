@@ -57,7 +57,55 @@ public class QuantExprRewriteVisitor extends SimpleRegexpBaseVisitor<ParseTree> 
     @Override
     public ParseTree visitQuantExpr(SimpleRegexpParser.QuantExprContext ctx) {
         super.visitChildren(ctx);
-        if (ctx.quantifier().unboundedCounter() == null) {
+        if (ctx.quantifier().plus() != null) {
+            // Rewrite x+ to xx*
+            QuantifiableContext x = ctx.quantifiable();
+            ConcatContext concatCtx = new ConcatContext((ParserRuleContext) ctx.parent, ctx.parent.invokingState);
+            assert concatCtx.parent == ctx.parent;
+            ParseTree leftChild = x.getChild(0);
+            if (leftChild instanceof TerminalNodeImpl) {
+                // If x is a terminal node, we need to create a new quantifiable node to hold it
+                concatCtx.addChild((TerminalNodeImpl) leftChild);
+            } else {
+                assert leftChild instanceof ParserRuleContext;
+                concatCtx.addChild((ParserRuleContext) leftChild);
+            }
+
+            QuantExprContext rightChild = new QuantExprContext(concatCtx, concatCtx.invokingState);
+            concatCtx.addChild(rightChild);
+            // x*/x*? will have two children: x and star (either greedy or lazy)
+            QuantExprContext parent = rightChild;
+            QuantifiableContext x2 = new QuantifiableContext(parent, parent.invokingState);
+            parent.addChild(x2);
+            parent.quantifiableCtx = x2;
+            x2.addChild(x.getPayload());
+            QuantifierContext q = new QuantifierContext(parent, parent.invokingState);
+            parent.quantifierCtx = q;
+            parent.addChild(q);
+            StarContext star = new StarContext(q, q.invokingState);
+            q.addChild(star);
+            q.egrns = ctx.quantifierCtx.egrns;
+            // The Eagerness enum is defined in SimpleRegexp.g4
+            star.egrns = ctx.quantifierCtx.egrns;
+            TerminalNode starTerminal = star.egrns == Eagerness.GREEDY
+                    ? new TerminalNodeImpl(new CommonToken(SimpleRegexpLexer.GREEDY_STAR, "*"))
+                    : new TerminalNodeImpl(new CommonToken(SimpleRegexpLexer.LAZY_STAR, "*?"));
+            star.addChild(starTerminal);
+            q.egrns = star.egrns;
+            q.addChild(star);
+            // Concat should have two children: x and either x* or x*?
+            assert concatCtx.children.size() == 2;
+            assert concatCtx.getChild(0) == leftChild;
+            assert concatCtx.getChild(1) == rightChild;
+            // x*/x*? should have two children: x and a star quantifier (either greedy or
+            // lazy)
+            assert rightChild.children.size() == 2;
+            assert rightChild.quantifiableCtx.getText().equals(x.getText());
+            assert rightChild.quantifierCtx.egrns == ctx.quantifierCtx.egrns;
+            assert rightChild.parent == concatCtx;
+            assert ctx.quantifierCtx.egrns == Eagerness.LAZY || ctx.quantifierCtx.egrns == Eagerness.GREEDY;
+            return concatCtx;
+        } else if (ctx.quantifier().unboundedCounter() == null) {
             // We only rewrite expressions with unbounded quantifiers.
             return ctx;
         } else {
@@ -129,7 +177,8 @@ public class QuantExprRewriteVisitor extends SimpleRegexpBaseVisitor<ParseTree> 
             assert leftChild.quantifierCtx.exactBound == ctx.quantifierCtx.lowerBound;
             assert leftChild.quantifierCtx.exactBound == leftChild.quantifierCtx.exactCounter().exactBound;
             assert leftChild.parent == concatCtx;
-            // x*? should have two children: x and a star quantifier (either greedy or lazy)
+            // x*/x*? should have two children: x and a star quantifier (either greedy or
+            // lazy)
             assert rightChild.children.size() == 2;
             assert rightChild.quantifiableCtx.getText().equals(x.getText());
             assert rightChild.quantifierCtx.egrns == ctx.quantifierCtx.egrns;
@@ -144,6 +193,10 @@ public class QuantExprRewriteVisitor extends SimpleRegexpBaseVisitor<ParseTree> 
     public static ParseTree rewriteUnboundedCounters(ParseTree tree) {
         QuantExprRewriteVisitor visitor = new QuantExprRewriteVisitor();
         return visitor.visit(tree);
+    }
+
+    public static ParseTree rewriteUnboundedCounters(String input) {
+        return rewriteUnboundedCounters(makeParser(input).regexp());
     }
 
     public static ParseTree parse(String input) {
