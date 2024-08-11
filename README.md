@@ -34,17 +34,16 @@ source scripts/set_classpath.sh
 
 Run the application with a command that matches the template below.
 
-```Bash
-java nca.App <input_file> <mode> [<string_to_match>]
+```Markdown
+java cli.App [-f|-r] <arg> -m <arg> [-q <arg>]
 ```
 
 For example:
 
 ```Bash
-java nca.App src/test/input/example_3_2.txt ra
+java cli.App -f src/test/resources/regexs/example_3_2.txt -m ra
 ```
 
-**Note:** text files containing regular expressions are provided in `src/test/input`.
 
 The options for the `mode` argument are:
 
@@ -57,38 +56,40 @@ The options for the `mode` argument are:
 
 ### Examples
 
-Example regexs are provided in `src/test/input`. Commands to run each mode for Example 3.2 (`.*a{2}`) are shown below.
+Example regexs are provided in `src/test/resources/regexs/`. Commands to run each mode for Example 3.2 (`.*a{2}`) are shown below.
 
 ```Bash
-export fpath="src/test/input/example_3_2.txt"
+export fpath="src/test/resources/regexs/example_3_2.txt"
 
 # Construct and print the NCA
-java nca.App ${fpath} nca
+java cli.App -f ${fpath} -m  nca
 
 # Construct and print the NFA
-java nca.App ${fpath} nfa
+java cli.App -f ${fpath} -m  nfa
 
 # Construct the NFA and try match "a"
-java nca.App ${fpath} match a
+java cli.App -f ${fpath} -m  match -q a
 # Construct the NFA and try match "aa"
-java nca.App ${fpath} match aa
+java cli.App -f ${fpath} -m  match -q aa
 # Construct the NFA and try match "aaa"
-java nca.App ${fpath} match aaa
+java cli.App -f ${fpath} -m  match -q aaa
 
 # Perform accurate reachability analysis
-java nca.App ${fpath} ra
+java cli.App -f ${fpath} -m  ra
 
 # Perform approximate reachability analysis
-java nca.App ${fpath} aa
+java cli.App -f ${fpath} -m  aa
 ```
 
 Similar commands can be run for other examples, such as Example 3.4 (`.*(ab{3}|cd{3})`). The commands below show that the input string "abb" does not match the regex, whereas "abbb" does.
 
 ```Bash
+export fpath="src/test/resources/regexs/example_3_4.txt"
+
 # The regex should not match "abb"
-java nca.App ${fpath} match abb
+java cli.App -f ${fpath} -m  match -q abb
 # The regex should match "abbb"
-java nca.App ${fpath} match abbb
+java cli.App -f ${fpath} -m  match -q abbb
 ```
 
 ## Supported regular expression constructs
