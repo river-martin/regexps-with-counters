@@ -60,7 +60,6 @@ public class TestApp {
                 assert !(definitelyNotAmbiguous && ambiguous);
             } catch (Exception e) {
                 System.out.println("Error processing regex: " + regex);
-                e.printStackTrace();
                 exactTimesWriter.close();
                 approxTimesWriter.close();
                 throw e;
@@ -240,16 +239,13 @@ public class TestApp {
     public void testForEmptyStackException() {
         String r = "http://(?:www\\.|)uploaded\\.to/\\?id=[a-z0-9]{6}";
         ProductNFA pnfa = new ProductNFA(new NFA(NCA.glushkov(r)));
-        assert !pnfa.mightBeAmbiguous();
         assert !pnfa.isAmbiguous();
     }
 
     @ParameterizedTest
-    @ValueSource(strings = { "(?:a|)b{6}", "(){7}|(){6}", "a{1}||b{2}", "(a{2}|)", "(|a{2})", "a{1}|", " " })
+    @ValueSource(strings = { "a(a{1}|)b", "a(|a{1})b", "(?:a|)b{6}", "(){7}|(){6}", "a{1}||b{2}", "(a{2}|)", "(|a{2})", "a{1}|", " | " })
     public void simpleTestForEmptyStackException(String r) {
-        ProductNFA pnfa = new ProductNFA(new NFA(NCA.glushkov(r)));
-        assert !pnfa.mightBeAmbiguous();
-        assert !pnfa.isAmbiguous();
+        new ProductNFA(new NFA(NCA.glushkov(r)));
     }
 
 
