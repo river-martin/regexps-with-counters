@@ -25,26 +25,19 @@ private final static boolean DISALLOW_LAZINESS = false;
 
 // Parser rules
 
-regexp: (
-		group
-		| quantExpr
-		| concat
-		| alt
-		| nonEmptyTerminal
-		| emptyString
-	) EOF;
+regexp: body (concat body)* EOF;
 
 anchor: '^' | '$';
 
-group:
-	'(' (
-		quantExpr
-		| group
-		| concat
-		| alt
-		| nonEmptyTerminal
-		| emptyString
-	) ')';
+group: openGroup body closeGroup;
+
+body:
+	quantExpr
+	| group
+	| concat
+	| alt
+	| nonEmptyTerminal
+	| emptyString;
 
 exactCounter
 	returns[int exactBound, Eagerness egrns]:
@@ -59,7 +52,7 @@ boundedCounter
 
 unboundedCounter
 	returns[int lowerBound, Eagerness egrns]:
-	openCounter lwr = bound {$lowerBound = $lwr.val;} cc = closeCounter[ALLOW_LAZINESS] {$egrns = $cc.egrns;
+	openCounter lwr = bound {$lowerBound = $lwr.val;} ',' cc = closeCounter[ALLOW_LAZINESS] {$egrns = $cc.egrns;
 		};
 
 openCounter: '{';
@@ -111,13 +104,7 @@ ques
 
 quantifiable: (group | nonEmptyTerminal);
 
-concat: (quantExpr | group | nonEmptyTerminal) (
-		quantExpr
-		| group
-		| nonEmptyTerminal
-		| emptyString
-		| concat
-	);
+concat: (quantExpr | group | nonEmptyTerminal) body;
 
 alt: (concat | emptyString) ( '|' (concat | emptyString));
 
@@ -130,6 +117,10 @@ charCls:
 	| ANY_CLS;
 
 nonEmptyTerminal: charCls | NON_DIGIT_CHAR | DIGIT | anchor;
+
+openGroup: '(';
+
+closeGroup: ')';
 
 emptyString:;
 

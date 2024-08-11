@@ -9,3 +9,9 @@ src/main/java/regexlang/SimpleRegexpParser.java
 src/main/java/regexlang/SimpleRegexpBaseListener.java
 src/main/java/regexlang/SimpleRegexpBaseVisitor.java
 src/main/java/regexlang/SimpleRegexpVisitor.java
+src/main/java/regexlang/LispParseTreeBaseListener.java
+src/main/java/regexlang/LispParseTreeBaseVisitor.java
+src/main/java/regexlang/LispParseTreeLexer.java
+src/main/java/regexlang/LispParseTreeListener.java
+src/main/java/regexlang/LispParseTreeParser.java
+src/main/java/regexlang/LispParseTreeVisitor.java

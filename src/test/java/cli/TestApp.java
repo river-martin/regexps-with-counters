@@ -140,7 +140,7 @@ public class TestApp {
                 assert line.isEmpty();
                 continue;
             }
-            ParseTree rewrittenTree = QuantifierRewriteVisitor.rewrite(tree);
+            ParseTree rewrittenTree = QuantifierRewriteVisitor.rewriteUnboundedCounters(tree);
             assert rewrittenTree != null;
             SimpleRegexpBaseVisitor<ParseTree> validationVisitor = new SimpleRegexpBaseVisitor<ParseTree>() {
                 @Override
@@ -154,7 +154,7 @@ public class TestApp {
 
             // The rewriter should not change the tree if there are no unbounded counters
             // (and there should not be any after the first rewrite)
-            ParseTree validationTree = QuantifierRewriteVisitor.rewrite(rewrittenTree);
+            ParseTree validationTree = QuantifierRewriteVisitor.rewriteUnboundedCounters(rewrittenTree);
             assert validationTree != null;
             assert validationTree.equals(rewrittenTree);
         }
