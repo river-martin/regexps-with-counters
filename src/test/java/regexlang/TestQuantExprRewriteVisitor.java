@@ -1,7 +1,6 @@
 package regexlang;
 
 import org.antlr.v4.runtime.tree.ParseTree;
-import org.antlr.v4.runtime.tree.Trees;
 import org.junit.jupiter.api.Test;
 
 import cli.IterableLines;

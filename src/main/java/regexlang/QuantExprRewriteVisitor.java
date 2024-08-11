@@ -30,10 +30,7 @@ public class QuantExprRewriteVisitor extends SimpleRegexpBaseVisitor<ParseTree> 
         List<ParseTree> newChildren = new ArrayList<>(ctx.children.size());
         for (ParseTree child : ctx.children) {
             if (child instanceof TerminalNodeImpl) {
-                TerminalNodeImpl newChild = (TerminalNodeImpl) visit(child);
-                if (newChild != null) {
-                    newChildren.add(newChild);
-                }
+                newChildren.add(child);
             } else if (child instanceof ParserRuleContext) {
                 ParserRuleContext newChild = (ParserRuleContext) visit(child);
                 if (newChild != null) {
@@ -164,12 +161,11 @@ public class QuantExprRewriteVisitor extends SimpleRegexpBaseVisitor<ParseTree> 
         SimpleRegexpParser parser = makeParser(input);
         ParseTree tree = parser.regexp();
         System.out.println(tree.getText());
-        ParseTree treeWithNonTerminalTokens = TreeStringVisitor.rewriteWithTokensForParserRules(tree);
         System.out.println("Tree with unbounded counters:");
-        System.out.println(Trees.toStringTree(treeWithNonTerminalTokens, parser));
+        System.out.println(Trees.toStringTree(tree, parser));
         tree = QuantExprRewriteVisitor.rewriteUnboundedCounters(tree);
-        treeWithNonTerminalTokens = TreeStringVisitor.rewriteWithTokensForParserRules(tree);
         System.out.println("Rewritten tree:");
-        System.out.println(Trees.toStringTree(treeWithNonTerminalTokens, parser));
+        System.out.println(Trees.toStringTree(tree, parser));
+        System.out.println(tree.getText());
     }
 }
