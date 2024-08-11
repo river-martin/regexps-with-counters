@@ -2,6 +2,8 @@ grammar SimpleRegexp;
 
 @header {
 package regexlang;
+
+import regexlang.UnsupportedRegexException;
 }
 
 @members {
@@ -25,19 +27,16 @@ private final static boolean DISALLOW_LAZINESS = false;
 
 // Parser rules
 
-regexp: body (concat body)* EOF;
+regexp: (body | emptyString) EOF;
+
+group: openGroup (body | emptyString) closeGroup;
 
 anchor: '^' | '$';
 
-group: openGroup body closeGroup;
-
 body:
-	quantExpr
-	| group
+	alt
 	| concat
-	| alt
-	| nonEmptyTerminal
-	| emptyString;
+	| lookaround body; // throws UnsupportedRegexException
 
 exactCounter
 	returns[int exactBound, Eagerness egrns]:
@@ -64,7 +63,7 @@ closeCounter[boolean allowLaziness]
 
 bound
 	returns[int val]:
-	s = INT {$val = Integer.parseInt($s.getText());};
+	s = integer {$val = Integer.parseInt($s.ctx.getText());};
 
 quantExpr
 	returns[QuantifiableContext quantifiableCtx, QuantifierContext quantifierCtx]:
@@ -104,9 +103,14 @@ ques
 
 quantifiable: (group | nonEmptyTerminal);
 
-concat: (quantExpr | group | nonEmptyTerminal) body;
+concat: (quantExpr | group | nonEmptyTerminal) (
+		concat
+		| emptyString
+	);
 
-alt: (concat | emptyString) ( '|' (concat | emptyString));
+alt: (concat | emptyString) (
+		'|' (body | emptyString)
+	);
 
 charCls:
 	CHAR_RANGE
@@ -116,13 +120,31 @@ charCls:
 	| SPACE_CLS
 	| ANY_CLS;
 
-nonEmptyTerminal: charCls | NON_DIGIT_CHAR | DIGIT | anchor;
+nonEmptyTerminal:
+	anchor
+	| charCls
+	| LETTER
+	| NON_DIGIT_CHAR
+	| DIGIT
+	| ESCAPED_CHAR;
 
-openGroup: '(';
+openGroup: '(?:' | '(<' groupName '>' | '(';
 
 closeGroup: ')';
 
+groupName: LETTER+;
+
 emptyString:;
+
+// Unsupported
+
+lookaround:
+	openLookaround body closeLookaround {throw new UnsupportedRegexException("Lookaround is not supported");
+		};
+
+openLookaround: '(?' | '(?<=' | '(?<!' | '?=' | '(?<!';
+
+closeLookaround: ')';
 
 // Lexer rules
 
@@ -150,8 +172,13 @@ SPACE_CLS: '\\s';
 ANY_CLS: '.';
 
 // Used for the bounds of quantifiers
-INT: DIGIT+;
+integer: DIGIT+;
 
 DIGIT: [0-9];
 
-NON_DIGIT_CHAR: ~[0-9];
+LETTER: [a-zA-Z];
+
+// XXX If any named character classes are missed by the lexer, they will be treated as escaped characters
+ESCAPED_CHAR: '\\' .;
+
+NON_DIGIT_CHAR: LETTER | ~[0-9];

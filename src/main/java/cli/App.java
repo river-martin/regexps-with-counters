@@ -5,14 +5,14 @@ import org.apache.commons.cli.*;
 import automata.NCA;
 import automata.NFA;
 import automata.ProductNFA;
-import automata.UnsupportedRegexException;
 import regexlang.QuantExprRewriteVisitor;
+import regexlang.RegexSyntaxErrorException;
 import regexlang.SimpleRegexpParser;
+import regexlang.UnsupportedRegexException;
+
 import org.antlr.v4.runtime.tree.ParseTree;
 
 import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
  * Launches the project, preprocesses input regular expressions and performs a
@@ -20,122 +20,6 @@ import java.util.regex.Pattern;
  */
 public class App {
     private final static String COUNTER_MATCHING_REGEX = ".*?\\{(\\d+|\\d+,\\d+|\\d+,)}.*?";
-
-    public static String preprocessRegex(String regex) {
-        // TODO: document and test
-
-        regex = regex.replace("||", "|()|");
-        regex = regex.replace("\\?", "");
-        regex = regex.replace("?:", "").replace("?>", "").replace("?", "");
-        regex = regex.replace("[]", "");
-        Pattern pattern = Pattern.compile("\\^.*?\\$|/.*?/");
-        Matcher matcher = pattern.matcher(regex);
-        Set<String> matches = new HashSet<>();
-        while (matcher.find()) {
-            matches.add(matcher.group());
-        }
-        for (String match : matches) {
-            String replacement = match.substring(1, match.length() - 1);
-            regex = regex.replace(match, replacement);
-        }
-        String processed = translatePlus(regex);
-        int i = 1;
-        while (i < processed.length()) {
-            char c2 = processed.charAt(i);
-            char c1 = processed.charAt(i - 1);
-            if (c1 == ',' && c2 == '}') {
-                String substring = processed.substring(0, i + 1);
-                String processedSubstring = "(" + translateUnboundedCounters(substring) + ")";
-                processed = processedSubstring + processed.substring(substring.length());
-                i = processedSubstring.length() + 1;
-            } else {
-                i++;
-            }
-        }
-        return processed.replace("{1}", "");
-    }
-
-    /**
-     * Replaces the + operator with the equivalent {1,} operator.
-     * 
-     * XXX: This method does not handle escaped + operators appropriately. It does
-     * not handle plusses in character classes appropriately either.
-     * 
-     * @param regex The regular expression to replace the + operators in.
-     * @return The regular expression with the + operators replaced with {1,}.
-     */
-    protected static String translatePlus(String regex) {
-        return regex.replaceAll("\\+", "{1,}");
-    }
-
-    protected static String translateUnboundedCounters(String regex) {
-        // Rewrite unbounded counters to bounded counters followed by a kleene star.
-        String[] segments = regex.split("\\{\\d*,}");
-        String[] bounds = regex.split(",}");
-        if (segments.length == 1 && segments[0].equals(regex)) {
-            return regex;
-        }
-        for (int i = 0; i < bounds.length; i++) {
-            bounds[i] = bounds[i].substring(bounds[i].lastIndexOf("{") + 1);
-        }
-        StringBuilder translated = new StringBuilder();
-        int i = 0;
-        for (String segment : segments) {
-            char c = segment.charAt(segment.length() - 1);
-            String countableExpression;
-            switch (c) {
-                case ']':
-                    countableExpression = getCharacterClass(segment);
-                    break;
-                case ')':
-                    countableExpression = getGroup(segment);
-                    break;
-                default:
-                    countableExpression = getCharOrPredefinedCharClass(segment);
-                    break;
-            }
-            translated.append(segment.substring(0, segment.lastIndexOf(countableExpression)));
-            translated.append(countableExpression).append("{").append(bounds[i++]).append("}");
-            translated.append(countableExpression).append("*");
-        }
-        return translated.toString();
-    }
-
-    private static String getCharOrPredefinedCharClass(String regex) {
-        if (regex.length() >= 2 && regex.charAt(regex.length() - 2) == '\\') {
-            return regex.substring(regex.length() - 2);
-        } else {
-            return regex.substring(regex.length() - 1);
-        }
-    }
-
-    private static String getGroup(String regex) {
-        int rparCount = 1;
-        int i;
-        for (i = regex.length() - 2; i >= 0 && rparCount > 0; i--) {
-            if (regex.charAt(i) == ')') {
-                rparCount++;
-            } else if (regex.charAt(i) == '(') {
-                rparCount--;
-            }
-        }
-        i++;
-        return regex.substring(i);
-    }
-
-    private static String getCharacterClass(String regex) {
-        int rbrackCount = 1;
-        int i;
-        for (i = regex.length() - 2; i >= 0 && rbrackCount > 0; i--) {
-            if (regex.charAt(i) == ']') {
-                rbrackCount++;
-            } else if (regex.charAt(i) == '[') {
-                rbrackCount--;
-            }
-        }
-        i++;
-        return regex.substring(i);
-    }
 
     protected static boolean containsCounter(String regex) {
         return regex.matches(COUNTER_MATCHING_REGEX);
@@ -172,6 +56,17 @@ public class App {
         } else {
             System.out.println("may be ambiguous.");
         }
+    }
+
+    public static String preprocessRegex(String regex) throws UnsupportedRegexException, RegexSyntaxErrorException {
+        SimpleRegexpParser regexParser = QuantExprRewriteVisitor.makeParser(regex);
+        ParseTree tree = regexParser.regexp();
+        tree = regexlang.QuantExprRewriteVisitor.rewriteUnboundedCounters(tree);
+        if (regexParser.getNumberOfSyntaxErrors() > 0) {
+            throw new RegexSyntaxErrorException(String.format("Regex `%s` contains a syntax error.", regex));
+        }
+        regex = tree.getText().replace("<EOF>", "");
+        return regex;
     }
 
     public static boolean match(String regex, String queryString) {

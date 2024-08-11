@@ -15,6 +15,9 @@ import org.junit.jupiter.api.Test;
 import automata.NCA;
 import automata.NFA;
 import automata.ProductNFA;
+import regexlang.RegexSyntaxErrorException;
+import regexlang.Regexp;
+import regexlang.UnsupportedRegexException;
 
 /**
  * Test cases for some of the features of this project.
@@ -64,27 +67,31 @@ public class TestApp {
     public void processAndFilterRegexLib() throws IOException {
         System.out.println("Processing and filtering regexlib.txt (this takes a while)");
         String fileName = config.Config.getProperty("testInputDir") + "regexlib.txt";
-        PrintWriter processedRegexWriter = new PrintWriter(new FileWriter(config.Config.getProperty("testInputDir") + "processed_regexlib.txt"));
+        PrintWriter processedRegexWriter = new PrintWriter(
+                new FileWriter(config.Config.getProperty("testInputDir") + "processed_regexlib.txt"));
+        Regexp r;
         for (String regex : new IterableLines(fileName)) {
             if (regex.length() > 70) {
                 continue;
             }
-            regex = App.preprocessRegex(regex);
-            if (!App.containsCounter(regex)) {
-                // We only want to test regular expressions with counters.
+            try {
+                regex = App.preprocessRegex(regex);
+                 r = new Regexp(regex);
+            } catch (UnsupportedRegexException e) {
+                System.out.println(String.format("Regex `%s` is invalid. " + e.getMessage(), regex));
+                continue;
+            } catch (RegexSyntaxErrorException e) {
+                System.out.println(e.getMessage());
                 continue;
             }
-            try {
+            if (r.containsCounter()) {
                 ProductNFA pNfa = new ProductNFA(new NFA(NCA.glushkov(regex)));
                 boolean ambiguous = pNfa.isAmbiguous();
                 boolean definitelyUnambiguous = !pNfa.mightBeAmbiguous();
                 assert !(definitelyUnambiguous && ambiguous);
                 processedRegexWriter.println(regex);
-            } catch (Exception e) {
-                // XXX: This may reject valid regular expressions that crash the
-                // code for the glushkov construction, the Product NFA construction, or the
-                // either of the ambiguity detection algorithms.
-                System.out.printf("Warning: regex `%s` rejected\n", regex);
+            } else {
+                continue;
             }
         }
         processedRegexWriter.close();
