@@ -1,6 +1,7 @@
 package regexlang;
 
 import org.antlr.v4.runtime.tree.ParseTree;
+import org.antlr.v4.runtime.tree.Trees;
 import org.junit.jupiter.api.Test;
 
 import cli.IterableLines;
@@ -15,7 +16,8 @@ public class TestQuantExprRewriteVisitor {
     String fileName = config.Config.getProperty("testInputDir") + "unbounded_counters.txt";
     ParseTree tree;
     for (String line : new IterableLines(fileName)) {
-      tree = QuantExprRewriteVisitor.parse(line);
+      SimpleRegexpParser parser = QuantExprRewriteVisitor.makeParser(line);
+      tree = parser.regexp();
       ParseTree rewrittenTree = QuantExprRewriteVisitor.rewriteUnboundedCounters(tree);
       assert rewrittenTree != null;
       SimpleRegexpBaseVisitor<ParseTree> validationVisitor = new SimpleRegexpBaseVisitor<ParseTree>() {

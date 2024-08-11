@@ -7,6 +7,10 @@ import org.antlr.v4.runtime.tree.TerminalNodeImpl;
 import org.antlr.v4.runtime.tree.Trees;
 
 import regexlang.SimpleRegexpParser.*;
+
+import java.util.ArrayList;
+import java.util.List;
+
 import org.antlr.v4.runtime.*;
 
 public class QuantExprRewriteVisitor extends SimpleRegexpBaseVisitor<ParseTree> {
@@ -19,8 +23,28 @@ public class QuantExprRewriteVisitor extends SimpleRegexpBaseVisitor<ParseTree> 
      */
     @Override
     public ParseTree visitChildren(RuleNode node) {
-        super.visitChildren(node);
-        return node;
+        ParserRuleContext ctx = (ParserRuleContext) node;
+        if (ctx.children == null) {
+            return ctx;
+        }
+        List<ParseTree> newChildren = new ArrayList<>(ctx.children.size());
+        for (ParseTree child : ctx.children) {
+            if (child instanceof TerminalNodeImpl) {
+                TerminalNodeImpl newChild = (TerminalNodeImpl) visit(child);
+                if (newChild != null) {
+                    newChildren.add(newChild);
+                }
+            } else if (child instanceof ParserRuleContext) {
+                ParserRuleContext newChild = (ParserRuleContext) visit(child);
+                if (newChild != null) {
+                    newChildren.add(newChild);
+                }
+            } else {
+                throw new IllegalArgumentException("Unexpected node type: " + child.getClass().getSimpleName());
+            }
+        }
+        ctx.children = newChildren;
+        return ctx;
     }
 
     /**
@@ -60,13 +84,13 @@ public class QuantExprRewriteVisitor extends SimpleRegexpBaseVisitor<ParseTree> 
             x1.addChild(x.getPayload());
             QuantifierContext q = new QuantifierContext(parent, parent.invokingState);
             parent.quantifierCtx = q;
+            parent.addChild(q);
             ExactCounterContext exactCounter = new ExactCounterContext(q, q.invokingState);
             // Exact counters only match a specific number of occurrences
             exactCounter.egrns = Eagerness.NEUTRAL;
             q.addChild(exactCounter);
             // The instance variables for the bounds are defined in SimpleRegexp.g4
             q.exactBound = ctx.quantifierCtx.lowerBound;
-            parent.addChild(q);
             exactCounter.exactBound = q.exactBound;
             q.egrns = Eagerness.NEUTRAL;
             assert exactCounter.egrns == Eagerness.NEUTRAL;
@@ -147,6 +171,5 @@ public class QuantExprRewriteVisitor extends SimpleRegexpBaseVisitor<ParseTree> 
         treeWithNonTerminalTokens = TreeStringVisitor.rewriteWithTokensForParserRules(tree);
         System.out.println("Rewritten tree:");
         System.out.println(Trees.toStringTree(treeWithNonTerminalTokens, parser));
-
     }
 }
