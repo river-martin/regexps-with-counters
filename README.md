@@ -15,7 +15,6 @@ pip install antlr4-tools
 antlr4 src/main/java/regexlang/SimpleRegexp.g4 -visitor
 ```
 
-
 ### Compilation
 
 ```Bash
@@ -53,7 +52,6 @@ For example:
 ```Bash
 java cli.App -f src/test/resources/regexs/example_3_2.txt -m ra
 ```
-
 
 The options for the `mode` argument are:
 
