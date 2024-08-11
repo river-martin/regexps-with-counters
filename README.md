@@ -6,6 +6,16 @@
 
 Install Maven and Java.
 
+Install ANTLR and use it to generate the regex parser:
+
+```Bash
+python3 -m venv venv
+source venv/bin/activate
+pip install antlr4-tools
+antlr4 src/main/java/regexlang/SimpleRegexp.g4 -visitor
+```
+
+
 ### Compilation
 
 ```Bash
