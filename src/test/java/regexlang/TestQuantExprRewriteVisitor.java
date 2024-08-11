@@ -36,4 +36,15 @@ public class TestQuantExprRewriteVisitor {
       assert validationTree.equals(rewrittenTree);
     }
   }
+
+  @Test
+  public void testTranslationOfPlus() {
+    String regex = "a+";
+    SimpleRegexpParser parser = QuantExprRewriteVisitor.makeParser(regex);
+    ParseTree tree = parser.regexp();
+    ParseTree rewrittenTree = QuantExprRewriteVisitor.rewriteUnboundedCounters(tree);
+    assert rewrittenTree != null;
+    String rewritten = rewrittenTree.getText().replace("<EOF>", "");
+    assert rewritten.equals("aa*");
+  }
 }
