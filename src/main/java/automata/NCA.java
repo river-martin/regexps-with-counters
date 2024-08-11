@@ -2,8 +2,6 @@ package automata;
 
 import java.util.*;
 
-import automata.NFA.NfaState;
-
 /**
  * Implements a nondeterministic counter automata.
  */

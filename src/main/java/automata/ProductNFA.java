@@ -4,8 +4,6 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import cli.App;
-
 /**
  * Constructs the full product NFA from an NFA. (See the constructor of this
  * class)
