@@ -9,7 +9,7 @@ import org.antlr.v4.runtime.tree.Trees;
 import regexlang.SimpleRegexpParser.*;
 import org.antlr.v4.runtime.*;
 
-public class QuantifierRewriteVisitor extends SimpleRegexpBaseVisitor<ParseTree> {
+public class QuantExprRewriteVisitor extends SimpleRegexpBaseVisitor<ParseTree> {
 
     /**
      * Visit all children of a node and return the node itself.
@@ -121,7 +121,7 @@ public class QuantifierRewriteVisitor extends SimpleRegexpBaseVisitor<ParseTree>
     }
 
     public static ParseTree rewriteUnboundedCounters(ParseTree tree) {
-        QuantifierRewriteVisitor visitor = new QuantifierRewriteVisitor();
+        QuantExprRewriteVisitor visitor = new QuantExprRewriteVisitor();
         return visitor.visit(tree);
     }
 
@@ -143,7 +143,7 @@ public class QuantifierRewriteVisitor extends SimpleRegexpBaseVisitor<ParseTree>
         ParseTree treeWithNonTerminalTokens = TreeStringVisitor.rewriteWithTokensForParserRules(tree);
         System.out.println("Tree with unbounded counters:");
         System.out.println(Trees.toStringTree(treeWithNonTerminalTokens, parser));
-        tree = QuantifierRewriteVisitor.rewriteUnboundedCounters(tree);
+        tree = QuantExprRewriteVisitor.rewriteUnboundedCounters(tree);
         treeWithNonTerminalTokens = TreeStringVisitor.rewriteWithTokensForParserRules(tree);
         System.out.println("Rewritten tree:");
         System.out.println(Trees.toStringTree(treeWithNonTerminalTokens, parser));

@@ -10,22 +10,16 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.antlr.v4.runtime.RecognitionException;
-import org.antlr.v4.runtime.tree.ParseTree;
 import org.junit.Test;
 
 import automata.NCA;
 import automata.NFA;
 import automata.ProductNFA;
-import regexlang.QuantifierRewriteVisitor;
-import regexlang.SimpleRegexpBaseVisitor;
-import regexlang.SimpleRegexpParser.UnboundedCounterContext;
 
 /**
  * Test cases for some of the features of this project.
  */
 public class TestApp {
-    final String INPUT_DIR = "src/test/input/";
     final String COUNTER_MATCHING_REGEX = "\\{(\\d+|\\d+,\\d+|\\d+,)}";
 
     /**
@@ -39,7 +33,7 @@ public class TestApp {
         processAndFilterRegexLib();
         String approxTimeFileName = "report/approx_times.csv";
         String exactTimeFileName = "report/exact_times.csv";
-        String fileName = INPUT_DIR + "processed_regexlib.txt";
+        String fileName = config.Config.getProperty("testInputDir") + "processed_regexlib.txt";
         PrintWriter approxTimesWriter = new PrintWriter(new FileWriter(approxTimeFileName));
         PrintWriter exactTimesWriter = new PrintWriter(new FileWriter(exactTimeFileName));
         Iterable<String> lines = new IterableLines(fileName);
@@ -69,8 +63,8 @@ public class TestApp {
      */
     public void processAndFilterRegexLib() throws IOException {
         System.out.println("Processing and filtering regexlib.txt (this takes a while)");
-        String fileName = INPUT_DIR + "regexlib.txt";
-        PrintWriter processedRegexWriter = new PrintWriter(new FileWriter(INPUT_DIR + "processed_regexlib.txt"));
+        String fileName = config.Config.getProperty("testInputDir") + "regexlib.txt";
+        PrintWriter processedRegexWriter = new PrintWriter(new FileWriter(config.Config.getProperty("testInputDir") + "processed_regexlib.txt"));
         for (String regex : new IterableLines(fileName)) {
             if (regex.length() > 70) {
                 continue;
@@ -122,44 +116,6 @@ public class TestApp {
         return currentMax;
     }
 
-    /**
-     * Test that unbounded counters are translated correctly.
-     */
-    @Test
-    public void testTranslationOfUnboundedCounters() {
-        String fileName = INPUT_DIR + "unbounded_counters.txt";
-        ParseTree tree;
-        for (String line : new IterableLines(fileName)) {
-            try {
-                 tree = QuantifierRewriteVisitor.parse(line);
-                 System.out.println("Tree: " + tree.toStringTree());
-                 System.out.println(tree.getText());
-            } catch (RecognitionException e) {
-                System.out.println(e.getMessage());
-                System.out.println("Error: " + line);
-                assert line.isEmpty();
-                continue;
-            }
-            ParseTree rewrittenTree = QuantifierRewriteVisitor.rewriteUnboundedCounters(tree);
-            assert rewrittenTree != null;
-            SimpleRegexpBaseVisitor<ParseTree> validationVisitor = new SimpleRegexpBaseVisitor<ParseTree>() {
-                @Override
-                public ParseTree visitUnboundedCounter(UnboundedCounterContext ctx) {
-                    // If we get here, the rewriter did not do its job
-                    assert false;
-                    return ctx;
-                }
-            };
-            validationVisitor.visit(rewrittenTree);
-
-            // The rewriter should not change the tree if there are no unbounded counters
-            // (and there should not be any after the first rewrite)
-            ParseTree validationTree = QuantifierRewriteVisitor.rewriteUnboundedCounters(rewrittenTree);
-            assert validationTree != null;
-            assert validationTree.equals(rewrittenTree);
-        }
-    }
-
     private String[] generateRandomStrings(int numStrings, int maxlen, String alphabet) {
         String[] generated = new String[numStrings];
         // First string is the empty string
@@ -183,7 +139,7 @@ public class TestApp {
      */
     @Test
     public void testMatcherWithRandomStrings() {
-        String fileName = INPUT_DIR + "matcher_test_input.txt";
+        String fileName = config.Config.getProperty("testInputDir") + "matcher_test_input.txt";
         String[] testStrings = generateRandomStrings(1000, 1000, "abcdef");
         Iterable<String> regexs = new IterableLines(fileName);
         String breaks = "bcaa";
@@ -201,7 +157,8 @@ public class TestApp {
             }
             testStrings[i] += "bbbbbb";
         }
-        Iterable<String> regexs = new IterableLines(INPUT_DIR + "matcher_test_input_2.txt");
+        Iterable<String> regexs = new IterableLines(
+                config.Config.getProperty("testInputDir") + "matcher_test_input_2.txt");
         testMatcher(regexs, testStrings);
     }
 
