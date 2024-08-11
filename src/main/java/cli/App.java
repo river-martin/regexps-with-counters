@@ -6,7 +6,9 @@ import automata.NCA;
 import automata.NFA;
 import automata.ProductNFA;
 import automata.UnsupportedRegexException;
-
+import regexlang.QuantExprRewriteVisitor;
+import regexlang.SimpleRegexpParser;
+import org.antlr.v4.runtime.tree.ParseTree;
 
 import java.util.*;
 import java.util.regex.Matcher;
@@ -135,7 +137,6 @@ public class App {
         return regex.substring(i);
     }
 
-    
     protected static boolean containsCounter(String regex) {
         return regex.matches(COUNTER_MATCHING_REGEX);
     }
@@ -207,41 +208,45 @@ public class App {
 
     public static void main(String[] args) {
         Options options = makeCommandlineOptions();
-        CommandLineParser parser = new DefaultParser();
+        CommandLineParser clParser = new DefaultParser();
         HelpFormatter formatter = new HelpFormatter();
         try {
-            CommandLine cmd = parser.parse(options, args);
+            CommandLine cmd = clParser.parse(options, args);
             String mode = cmd.getOptionValue("mode");
 
-            Iterable<String> regexps;
+            Iterable<String> regexpStrs;
             if (cmd.hasOption('r')) {
-                regexps = Arrays.asList(new String[] { cmd.getOptionValue("regexp") });
+                regexpStrs = Arrays.asList(new String[] { cmd.getOptionValue("regexp") });
             } else if (cmd.hasOption('f')) {
-                regexps = new IterableLines(cmd.getOptionValue("regexp-file"));
+                regexpStrs = new IterableLines(cmd.getOptionValue("regexp-file"));
             } else {
                 // A ParseException should be thrown before this point.
                 throw new ParseException("No regex provided.");
             }
-            for (String regex : regexps) {
-                regex = preprocessRegex(regex);
+            for (String regexStr : regexpStrs) {
+                SimpleRegexpParser regexParser = QuantExprRewriteVisitor.makeParser(regexStr);
+                ParseTree tree = regexParser.regexp();
+                tree = QuantExprRewriteVisitor.rewriteUnboundedCounters(tree);
+                regexStr = tree.getText().replace("<EOF>", "");
+                System.out.println(regexStr);
                 switch (mode) {
                     case "nca":
-                        System.out.println(NCA.glushkov(regex));
+                        System.out.println(NCA.glushkov(regexStr));
                         break;
                     case "nfa":
-                        System.out.println(new NFA(NCA.glushkov(regex)));
+                        System.out.println(new NFA(NCA.glushkov(regexStr)));
                         break;
                     case "ra":
-                        performReachabilityAnalysis(regex);
+                        performReachabilityAnalysis(regexStr);
                         break;
                     case "aa":
-                        performApproximateAnalysis(regex);
+                        performApproximateAnalysis(regexStr);
                         break;
                     case "match":
                         if (!cmd.hasOption("q"))
                             throw new ParseException("Query string is required for match mode.");
                         String queryString = cmd.getOptionValue("q");
-                        match(regex, queryString);
+                        System.out.println(match(regexStr, queryString));
                         break;
                     default:
                         throw new ParseException("Invalid mode.");
