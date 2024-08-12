@@ -91,8 +91,6 @@ public class QuantExprRewriteVisitor extends SimpleRegexpBaseVisitor<ParseTree> 
                     ? new TerminalNodeImpl(new CommonToken(SimpleRegexpLexer.GREEDY_STAR, "*"))
                     : new TerminalNodeImpl(new CommonToken(SimpleRegexpLexer.LAZY_STAR, "*?"));
             star.addChild(starTerminal);
-            q.egrns = star.egrns;
-            q.addChild(star);
             // Concat should have two children: x and either x* or x*?
             assert concatCtx.children.size() == 2;
             assert concatCtx.getChild(0) == leftChild;
